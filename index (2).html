@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0">
+<title>Fiabilité des équipements</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: bandeau de saisie en haut, résultats en colonne unique lisible dessous (indicateurs → courbes → interprétation → formules). */
+:root{
+  --bg:#f3f5f7; --surface:#ffffff; --fg:#14202b; --muted:#5b6b7a; --line:#d8dfe6;
+  --accent:#0b6e8a; --accent-ink:#ffffff; --accent-soft:#dff0f5;
+  --c-bleu:#1f6fb2; --c-orange:#d9731a; --c-vert:#2a8a4a; --c-rouge:#c43a3a; --c-gris:#8794a1;
+  --ok:#1f7a3f; --ok-bg:#e1f3e7; --warn:#a15c00; --warn-bg:#fdf0d8; --crit:#b3261e; --crit-bg:#fbe4e2; --info:#2b5f8f; --info-bg:#e3eef9;
+  --font-display:"Space Grotesk",system-ui,sans-serif;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f161d; --surface:#182129; --fg:#e6edf3; --muted:#92a1af; --line:#2b3844;
+  --accent:#4fb8d4; --accent-ink:#06222b; --accent-soft:#16323c;
+  --c-bleu:#5aa7e6; --c-orange:#f0933f; --c-vert:#52c07a; --c-rouge:#ee6b66; --c-gris:#7d8b98;
+  --ok:#6fd096; --ok-bg:#173325; --warn:#f2b45a; --warn-bg:#392b12; --crit:#ff8f88; --crit-bg:#3d1b19; --info:#8cc0f0; --info-bg:#172a3d;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f161d; --surface:#182129; --fg:#e6edf3; --muted:#92a1af; --line:#2b3844;
+  --accent:#4fb8d4; --accent-ink:#06222b; --accent-soft:#16323c;
+  --c-bleu:#5aa7e6; --c-orange:#f0933f; --c-vert:#52c07a; --c-rouge:#ee6b66; --c-gris:#7d8b98;
+  --ok:#6fd096; --ok-bg:#173325; --warn:#f2b45a; --warn-bg:#392b12; --crit:#ff8f88; --crit-bg:#3d1b19; --info:#8cc0f0; --info-bg:#172a3d;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.55;
+  padding-block:28px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:clamp(1.5rem,4vw,2rem);font-weight:700}
+h2{font-size:1.3rem;font-weight:700}
+h3{font-size:1.05rem;font-weight:700}
+p{margin:0}
+.sub{color:var(--muted);max-width:65ch;margin-top:6px}
+.kicker{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:20px}
+form.panel{display:flex;flex-direction:column;gap:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px 18px}
+label{display:flex;flex-direction:column;gap:5px;font-size:.85rem;font-weight:500;min-width:0}
+label small{color:var(--muted);font-weight:400}
+input{font:inherit;font-family:var(--font-mono);font-size:.95rem;padding:9px 10px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg);width:100%;min-width:0}
+input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.btn{font:inherit;font-weight:600;padding:10px 22px;border-radius:4px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer}
+.btn:hover{filter:brightness(1.08)}
+.note-ex{color:var(--muted);font-size:.8rem}
+.msg{padding:12px 14px;border-radius:4px;border:1px solid var(--line);margin-top:8px}
+.msg.err{background:var(--crit-bg);color:var(--crit);border-color:var(--crit)}
+.msg.warn{background:var(--warn-bg);color:var(--warn);border-color:var(--warn)}
+.msg.ok{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+.msg.info{background:var(--info-bg);color:var(--info);border-color:var(--info)}
+.msg ul{margin:6px 0 0;padding-left:20px}
+section{display:flex;flex-direction:column;gap:14px;min-width:0}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.metric{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px 14px;min-width:0}
+.metric .k{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.metric .v{font-family:var(--font-mono);font-size:1.25rem;font-weight:500;margin-top:4px;overflow-wrap:anywhere}
+.metric .v.na{font-size:.95rem;color:var(--muted)}
+.metric .u{font-size:.8rem;color:var(--muted)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500}
+td.num{font-family:var(--font-mono);white-space:nowrap}
+.tag{display:inline-block;font-size:.75rem;padding:2px 8px;border-radius:99px;font-weight:600;white-space:nowrap}
+.tag.calc{background:var(--info-bg);color:var(--info)}
+.tag.est{background:var(--warn-bg);color:var(--warn)}
+.tag.Bon{background:var(--ok-bg);color:var(--ok)}
+.tag.Attention{background:var(--warn-bg);color:var(--warn)}
+.tag.Critique{background:var(--crit-bg);color:var(--crit)}
+.tag.Information{background:var(--info-bg);color:var(--info)}
+.tag.p1{background:var(--crit-bg);color:var(--crit)}
+.tag.p2{background:var(--warn-bg);color:var(--warn)}
+.tag.p3{background:var(--ok-bg);color:var(--ok)}
+.cap{color:var(--muted);font-size:.82rem}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.tabs button{font:inherit;font-size:.88rem;padding:9px 14px;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent);font-weight:600}
+.zoom{display:flex;flex-direction:row;font-weight:400;align-items:center;gap:12px;flex-wrap:wrap;font-size:.85rem}
+.zoom input{width:min(260px,100%);padding:0;accent-color:var(--accent)}
+svg.chart{width:100%;height:auto;display:block}
+svg.chart text{fill:var(--muted);font-family:var(--font-mono);font-size:11px}
+svg.chart .gl{stroke:var(--line);stroke-width:1}
+svg.chart .ax{stroke:var(--muted);stroke-width:1}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.8rem}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.legend i{display:inline-block;width:20px;height:0;border-top:3px solid}
+.legend i.dash{border-top-style:dashed;border-top-width:2px}
+.legend i.dot{border-top-style:dotted;border-top-width:2px}
+.legend i.pt{width:9px;height:9px;border:none;border-radius:50%;background:var(--c-rouge)}
+.legend i.sh{width:16px;height:10px;border:none;background:var(--c-gris);opacity:.3}
+.bars{display:flex;flex-direction:column;gap:12px}
+.bar{display:grid;grid-template-columns:minmax(120px,190px) 1fr 100px;gap:10px;align-items:center;font-size:.85rem}
+.bar .track{height:18px;background:var(--bg);border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.bar .fill{height:100%}
+.bar .fill.hatch{background-image:repeating-linear-gradient(45deg,transparent 0 5px,rgba(255,255,255,.45) 5px 8px)}
+.bar .val{font-family:var(--font-mono);text-align:right}
+@media (max-width:560px){.bar{grid-template-columns:1fr 90px}.bar .track{grid-column:1/-1;order:3}}
+.item{border:1px solid var(--line);border-radius:6px;background:var(--surface);padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.item .head{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.item .head b{font-weight:600}
+details{border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+summary{cursor:pointer;padding:11px 14px;font-weight:500}
+details .in{padding:0 14px 14px;display:flex;flex-direction:column;gap:10px}
+pre.code{margin:0;padding:10px 12px;background:var(--bg);border:1px solid var(--line);border-radius:4px;font-family:var(--font-mono);font-size:.85rem;overflow-x:auto}
+.formule{font-family:var(--font-mono);font-size:1.02rem;color:var(--accent)}
+.legendvars{font-size:.85rem;color:var(--muted)}
+.hint{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="kicker">Maintenance industrielle</div>
+    <h1>Calcul de fiabilité des équipements</h1>
+    <p class="sub">Saisissez uniquement des valeurs globales. Aucun historique de pannes n'est nécessaire.</p>
+  </header>
+
+  <form class="panel" id="form" novalidate>
+    <label>Nom de l'équipement
+      <input id="nom" type="text" value="Pompe P-101" placeholder="Ex. : Pompe P-101" style="font-family:var(--font-body)">
+    </label>
+    <div class="grid">
+      <label>Nombre total de défaillances <small>Entier ≥ 0</small>
+        <input id="nb" type="number" inputmode="numeric" step="1" min="0" value="8"></label>
+      <label>Temps total de fonctionnement (h) <small>Heures &gt; 0</small>
+        <input id="tf" type="number" inputmode="decimal" step="any" min="0" value="4200"></label>
+      <label>Temps total d'arrêt (h) <small>Heures ≥ 0</small>
+        <input id="ta" type="number" inputmode="decimal" step="any" min="0" value="120"></label>
+      <label>Temps total de réparation (h) <small>Heures ≥ 0, inclus dans l'arrêt</small>
+        <input id="tr" type="number" inputmode="decimal" step="any" min="0" value="60"></label>
+      <label>Durée de mission t (h) <small>Heures &gt; 0</small>
+        <input id="tm" type="number" inputmode="decimal" step="any" min="0" value="500"></label>
+    </div>
+    <div class="hint">
+      <button class="btn" type="submit">Calculer</button>
+      <span class="note-ex">Les valeurs affichées sont un exemple : remplacez-les par celles de votre équipement.</span>
+    </div>
+  </form>
+
+  <div id="out" aria-live="polite"></div>
+</div>
+
+<script>
+"use strict";
+/* ============================ Utilitaires ============================ */
+const g = x => String(parseFloat(Number(x).toPrecision(6)));       // équivalent du format :g de Python
+const pct = (x, d = 2) => (x * 100).toFixed(d);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const $ = id => document.getElementById(id);
+const SEUIL_FAIBLE = 5;
+const ADIM = new Set(["DISPO_OBS", "DISPO_INTR", "R", "M"]);
+
+/* ============================ Validation ============================ */
+function valider(d) {
+  const erreurs = [], avert = [];
+  if (!d.nom || !d.nom.trim()) erreurs.push("Le nom de l'équipement est obligatoire.");
+  const champs = [["Nombre de défaillances", d.n], ["Temps de fonctionnement", d.top],
+    ["Temps d'arrêt", d.tarr], ["Temps de réparation", d.trep], ["Durée de mission", d.t]];
+  let ok = true;
+  for (const [l, v] of champs) if (!Number.isFinite(v)) { erreurs.push(`${l} : valeur numérique invalide ou manquante.`); ok = false; }
+  if (!ok) return {erreurs, avert};
+  const {n, top, tarr, trep, t} = d;
+  if (n < 0 || !Number.isInteger(n)) erreurs.push("Le nombre de défaillances doit être un entier positif ou nul.");
+  if (top <= 0) erreurs.push("Le temps de fonctionnement doit être strictement positif.");
+  if (tarr < 0) erreurs.push("Le temps d'arrêt ne peut pas être négatif.");
+  if (trep < 0) erreurs.push("Le temps de réparation ne peut pas être négatif.");
+  if (t <= 0) erreurs.push("La durée de mission doit être strictement positive.");
+  if (tarr >= 0 && trep >= 0 && trep > tarr)
+    erreurs.push("Incohérence : le temps de réparation ne peut pas dépasser le temps d'arrêt total (la réparation est incluse dans l'arrêt).");
+  if (erreurs.length) return {erreurs, avert};
+  if (n === 0) {
+    avert.push("Aucune défaillance : MTBF, MTTR, μ, R(t) et M(t) ne sont pas calculables. Un λ observé nul ne prouve pas l'absence de défaillance future.");
+    if (trep > 0) avert.push("Temps de réparation non nul alors qu'aucune défaillance n'est déclarée (maintenance préventive ?) : vérifiez la saisie.");
+  } else {
+    if (trep === 0) avert.push("Temps de réparation nul avec des défaillances : MTTR = 0 h et μ (donc M(t)) non calculable. Vérifiez la saisie.");
+    if (n < SEUIL_FAIBLE) avert.push(`Seulement ${n} défaillance(s) : les estimations (R(t), M(t)) sont statistiquement fragiles.`);
+  }
+  if (t > top) avert.push("La durée de mission dépasse le temps de fonctionnement observé : R(t) est une extrapolation au-delà des données.");
+  return {erreurs, avert};
+}
+
+/* ============================ Calculs ============================ */
+const NOTE_WEIBULL = "Paramètres de Weibull (β, η) non calculés : ils exigent les durées entre défaillances successives, absentes de la saisie globale. Hypothèse retenue : taux de défaillance constant (β = 1).";
+
+function calculer(d) {
+  const rap = valider(d);
+  if (rap.erreurs.length) return {erreurs: rap.erreurs};
+  const {n, top, tarr, trep, t} = d;
+  const ind = {};
+  const mk = (code, libelle, valeur, unite, nature, formule, num, remarque = "") =>
+    ind[code] = {code, libelle, valeur, unite, nature, formule, num, remarque};
+  const imp = (code, libelle, unite, nature, formule, raison) =>
+    mk(code, libelle, null, unite, nature, formule, "Calcul impossible", raison);
+
+  let mtbf = null, mttr = null, mu = null;
+  if (n > 0) {
+    mtbf = top / n;
+    mk("MTBF", "Temps moyen entre défaillances", mtbf, "h", "C", "MTBF = T_fonct / N", `MTBF = ${g(top)} / ${n} = ${g(mtbf)} h`);
+    mttr = trep / n;
+    mk("MTTR", "Temps moyen de réparation", mttr, "h", "C", "MTTR = T_rép / N", `MTTR = ${g(trep)} / ${n} = ${g(mttr)} h`,
+       trep === 0 ? "Temps de réparation nul : à vérifier." : "");
+  } else {
+    imp("MTBF", "Temps moyen entre défaillances", "h", "C", "MTBF = T_fonct / N", "Division par N = 0 : aucune défaillance observée.");
+    imp("MTTR", "Temps moyen de réparation", "h", "C", "MTTR = T_rép / N", "Division par N = 0 : aucune réparation à moyenner.");
+  }
+  const lam = n / top;
+  mk("LAMBDA", "Taux de défaillance", lam, "1/h", "C", "λ = N / T_fonct", `λ = ${n} / ${g(top)} = ${g(lam)} 1/h`,
+     n === 0 ? "Valeur moyenne observée. λ = 0 ne prouve pas l'absence de défaillance." : "");
+  if (n > 0 && trep > 0) {
+    mu = n / trep;
+    mk("MU", "Taux de réparation", mu, "1/h", "C", "μ = N / T_rép = 1 / MTTR", `μ = ${n} / ${g(trep)} = ${g(mu)} 1/h`);
+  } else {
+    imp("MU", "Taux de réparation", "1/h", "C", "μ = N / T_rép = 1 / MTTR",
+        n === 0 ? "Aucune défaillance." : "Temps de réparation nul : division par zéro.");
+  }
+  const aObs = top / (top + tarr);
+  mk("DISPO_OBS", "Disponibilité observée", aObs, "", "C", "A = T_fonct / (T_fonct + T_arrêt)",
+     `A = ${g(top)} / (${g(top)} + ${g(tarr)}) = ${g(aObs)} (${g(aObs * 100)} %)`,
+     "Suppose que T_fonct + T_arrêt représente le temps calendaire observé.");
+  if (mtbf !== null && mttr !== null) {
+    const ai = mtbf / (mtbf + mttr);
+    mk("DISPO_INTR", "Disponibilité intrinsèque", ai, "", "C", "A_i = MTBF / (MTBF + MTTR)",
+       `A_i = ${g(mtbf)} / (${g(mtbf)} + ${g(mttr)}) = ${g(ai)} (${g(ai * 100)} %)`,
+       "Ne tient compte que du temps de réparation (hors attentes logistiques).");
+  } else imp("DISPO_INTR", "Disponibilité intrinsèque", "", "C", "A_i = MTBF / (MTBF + MTTR)", "MTBF et MTTR non calculables (N = 0).");
+  const libR = `Fiabilité R(t) pour t = ${g(t)} h`, libM = `Maintenabilité M(t) pour t = ${g(t)} h`;
+  if (n > 0) {
+    const r = Math.exp(-lam * t);
+    mk("R", libR, r, "", "E", "R(t) = exp(−λ · t)", `R(${g(t)}) = exp(−${g(lam)} × ${g(t)}) = ${g(r)} (${g(r * 100)} %)`,
+       "Estimation valable si le taux de défaillance est constant.");
+  } else imp("R", libR, "", "E", "R(t) = exp(−λ · t)", "Aucune défaillance observée : estimation non significative (R = 1 serait trompeur).");
+  if (mu !== null) {
+    const m = 1 - Math.exp(-mu * t);
+    mk("M", libM, m, "", "E", "M(t) = 1 − exp(−μ · t)", `M(${g(t)}) = 1 − exp(−${g(mu)} × ${g(t)}) = ${g(m)} (${g(m * 100)} %)`,
+       "Probabilité de terminer une réparation en t heures, si la durée de réparation suit une loi exponentielle.");
+  } else imp("M", libM, "", "E", "M(t) = 1 − exp(−μ · t)", "μ non calculable.");
+  return {d, ind, avert: rap.avert};
+}
+
+/* ============================ Interprétation ============================ */
+const S = {dispoHaute: .98, dispoBasse: .90, fiabHaute: .90, fiabBasse: .70, maintHaute: .90, maintBasse: .60, ratio: .10, attente: .30};
+const RANG = {Information: 0, Bon: 1, Attention: 2, Critique: 3};
+const SYNTH = {
+  Critique: "Situation préoccupante : au moins un indicateur est sous le seuil critique indicatif.",
+  Attention: "Situation acceptable, avec des points de vigilance.",
+  Bon: "Indicateurs satisfaisants au regard des seuils indicatifs.",
+  Information: "Évaluation limitée : les données saisies ne permettent pas de qualifier la situation."};
+const AVERT_INTERP = "Interprétation et recommandations générées automatiquement par des règles simples, à partir de seuils indicatifs et des seules valeurs globales saisies. Elles doivent être validées par le responsable maintenance et ne remplacent pas une analyse AMDEC ou RCM.";
+const classer = (v, h, b) => v >= h ? "Bon" : v >= b ? "Attention" : "Critique";
+const NAT_E = "Estimé (modèle exponentiel)", NAT_C = "Calculé";
+
+function interpreter(res) {
+  const {n, top, tarr, trep, t} = res.d;
+  const v = {}; for (const k in res.ind) v[k] = res.ind[k].valeur;
+  const aObs = v.DISPO_OBS, aInt = v.DISPO_INTR, r = v.R, m = v.M, mtbf = v.MTBF, mttr = v.MTTR;
+  const C = [], R = [];
+
+  const nivA = classer(aObs, S.dispoHaute, S.dispoBasse);
+  const qA = {Bon: "élevée", Attention: "moyenne", Critique: "faible"}[nivA];
+  C.push({niveau: nivA, titre: `Disponibilité ${qA}`, nature: NAT_C,
+    texte: `La disponibilité observée est de ${pct(aObs)} % : l'équipement a été à l'arrêt ${g(tarr)} h sur ${g(top + tarr)} h observées (${pct(1 - aObs)} % du temps).`});
+
+  let nivR = null;
+  if (r !== null) {
+    nivR = classer(r, S.fiabHaute, S.fiabBasse);
+    const q = {Bon: "bonne", Attention: "modérée", Critique: "faible"}[nivR];
+    C.push({niveau: nivR, titre: `Fiabilité sur la mission : ${q}`, nature: NAT_E,
+      texte: `Sur une mission de ${g(t)} h, la probabilité de ne subir aucune défaillance est estimée à ${pct(r)} %, soit un risque estimé de ${pct(1 - r)} % d'au moins une défaillance. La mission représente ${(t / mtbf).toFixed(2)} × le MTBF (${g(mtbf)} h).`});
+  } else {
+    const k = -Math.log(0.05), lamSup = k / top;
+    C.push({niveau: "Information", titre: "Aucune défaillance observée", nature: NAT_E,
+      texte: `Aucune défaillance n'est déclarée sur ${g(top)} h de fonctionnement : MTBF, MTTR, R(t) et M(t) ne sont pas calculables. Cela ne prouve pas que l'équipement est sans risque. Sous l'hypothèse d'un taux constant, la borne supérieure de λ à 95 % de confiance serait d'environ ${g(lamSup)} 1/h (règle des trois : ≈ 3 / T_fonct), soit un MTBF d'au moins ≈ ${g(1 / lamSup)} h.`});
+  }
+
+  let nivM = null;
+  if (m !== null) {
+    nivM = classer(m, S.maintHaute, S.maintBasse);
+    const q = {Bon: "bonne", Attention: "modérée", Critique: "faible"}[nivM];
+    C.push({niveau: nivM, titre: `Maintenabilité : ${q}`, nature: NAT_E,
+      texte: `Une réparation a une probabilité estimée de ${pct(m)} % d'être terminée en ${g(t)} h (MTTR = ${g(mttr)} h). La durée t utilisée est celle de la mission.`});
+  } else if (n > 0) {
+    C.push({niveau: "Information", titre: "Maintenabilité non calculable", nature: NAT_C,
+      texte: "Le temps de réparation saisi est nul : μ et M(t) ne sont pas calculables. Vérifiez la saisie."});
+  }
+
+  let ratioHaut = false;
+  if (mtbf !== null && mttr !== null && mttr > 0) {
+    const ratio = mttr / mtbf; ratioHaut = ratio > S.ratio;
+    C.push({niveau: ratioHaut ? "Attention" : "Bon", titre: "Poids de la réparation", nature: NAT_C,
+      texte: `Le MTTR représente ${pct(ratio)} % du MTBF (${g(mttr)} h pour ${g(mtbf)} h).` + (ratioHaut ? " Une part importante du cycle est consacrée à la réparation." : "")});
+  }
+
+  let attenteHaute = false;
+  const attente = tarr - trep, partAttente = tarr > 0 ? attente / tarr : 0;
+  if (tarr > 0 && partAttente > S.attente) {
+    attenteHaute = true;
+    let tx = `${g(attente)} h d'arrêt sur ${g(tarr)} h (${(partAttente * 100).toFixed(1)} %) ne correspondent pas à du temps de réparation. Leur nature (attente de pièces, diagnostic, organisation, arrêts programmés…) n'est pas renseignée et doit être identifiée.`;
+    if (aInt !== null) tx += ` L'écart entre la disponibilité intrinsèque (${pct(aInt)} %) et la disponibilité observée (${pct(aObs)} %) provient de ces arrêts.`;
+    C.push({niveau: "Attention", titre: "Arrêts hors réparation importants", texte: tx, nature: NAT_C});
+  }
+
+  const faible = n > 0 && n < SEUIL_FAIBLE;
+  if (faible) C.push({niveau: "Attention", titre: "Échantillon faible", nature: "Information",
+    texte: `Seulement ${n} défaillance(s) observée(s) : R(t) et M(t) sont statistiquement fragiles et peuvent changer sensiblement avec de nouvelles données.`});
+  const extrap = n > 0 && t > top;
+  if (extrap) C.push({niveau: "Attention", titre: "Mission au-delà des données", nature: "Information",
+    texte: `La mission (${g(t)} h) dépasse le temps de fonctionnement observé (${g(top)} h) : R(t) est une extrapolation.`});
+  C.push({niveau: "Information", titre: "Loi de Weibull non évaluée", texte: NOTE_WEIBULL, nature: "Information"});
+
+  const rCrit = nivR === "Critique", rAtt = nivR === "Attention";
+  const mCrit = nivM === "Critique", mBas = nivM === "Attention" || nivM === "Critique";
+  if (nivA === "Critique") {
+    let j = `Disponibilité observée de ${pct(aObs)} % (${g(tarr)} h d'arrêt sur ${g(top + tarr)} h).`;
+    if (tarr > 0) j += ` Sur l'arrêt total, ${(trep / tarr * 100).toFixed(0)} % est du temps de réparation et ${((tarr - trep) / tarr * 100).toFixed(0)} % n'en est pas.`;
+    R.push({p: 1, action: "Classer cet équipement parmi les priorités d'amélioration et agir sur le levier dominant : fréquence des défaillances, durée de réparation ou arrêts hors réparation.", j});
+  }
+  if (rCrit || rAtt) R.push({p: rCrit ? 1 : 2,
+    action: "Analyser les causes des défaillances (analyse des causes racines, AMDEC) et traiter en priorité les modes de défaillance les plus fréquents ou les plus coûteux. Ces modes ne figurent pas dans la saisie : ils doivent être identifiés par le service maintenance.",
+    j: `R(t) estimée à ${pct(r)} % pour ${g(t)} h ; MTBF = ${g(mtbf)} h.`});
+  if (rCrit) R.push({p: 1, action: "Pour cette mission, prévoir une redondance (équipement de secours) ou un plan de repli, ou raccourcir la durée de mission.",
+    j: `Risque estimé de ${pct(1 - r)} % d'au moins une défaillance pendant ${g(t)} h.`});
+  if (mCrit || mBas || ratioHaut) {
+    const mo = [];
+    if (m !== null && mBas) mo.push(`M(t) = ${pct(m)} %`);
+    if (ratioHaut) mo.push(`MTTR/MTBF = ${pct(mttr / mtbf)} %`);
+    R.push({p: mCrit ? 1 : 2, action: "Réduire la durée des réparations : procédures d'intervention standardisées, pièces critiques disponibles, outillage et compétences adaptés, préparation des interventions.", j: mo.join(" ; ") + "."});
+  }
+  if (attenteHaute) R.push({p: 2, action: "Identifier la nature des arrêts hors réparation, puis réduire les attentes : stock de pièces critiques, astreinte, processus de diagnostic et d'approbation.",
+    j: `${g(attente)} h sur ${g(tarr)} h d'arrêt (${(partAttente * 100).toFixed(1)} %) ne sont pas du temps de réparation.`});
+  if (faible) R.push({p: 2, action: "Poursuivre la collecte des données et recalculer avant de décider d'actions lourdes ou coûteuses.", j: `Seulement ${n} défaillance(s) observée(s).`});
+  if (extrap) R.push({p: 2, action: "Recalculer la fiabilité lorsque le temps de fonctionnement cumulé atteindra la durée de mission, ou utiliser une mission plus courte.", j: `Mission de ${g(t)} h pour ${g(top)} h de fonctionnement observé.`});
+  if (n > 0) {
+    R.push({p: (rCrit || rAtt) ? 2 : 3,
+      action: "Si une analyse plus fine est souhaitée (hors de cet outil), enregistrer les durées entre défaillances successives pour ajuster une loi de Weibull : elle seule indique si l'équipement s'use (β > 1), se dégrade en début de vie (β < 1) ou tombe en panne de façon aléatoire (β ≈ 1), et justifie ou non une maintenance préventive systématique.",
+      j: "Sous l'hypothèse exponentielle utilisée ici, un remplacement systématique à âge fixe n'apporterait aucun gain : cette hypothèse n'est pas vérifiable avec la saisie globale."});
+    if (!R.some(x => x.p !== 3)) R.push({p: 3, action: "Maintenir le plan de maintenance actuel et suivre les indicateurs périodiquement.", j: "Aucun indicateur ne dépasse un seuil d'alerte indicatif."});
+  } else {
+    R.push({p: 3, action: "Maintenir la surveillance, enregistrer toute défaillance dès qu'elle survient et recalculer. Ne pas conclure à l'absence de risque.", j: `Aucune défaillance sur ${g(top)} h : fiabilité non évaluable.`});
+  }
+  R.sort((a, b) => a.p - b.p);
+
+  const niveaux = C.map(c => c.niveau).filter(x => x !== "Information");
+  let pire = niveaux.reduce((a, b) => RANG[b] > RANG[a] ? b : a, "Information");
+  let synthese;
+  if (r === null) {
+    if (pire === "Bon") { pire = "Information"; synthese = "Disponibilité satisfaisante, mais la fiabilité n'est pas évaluable : aucune défaillance n'a été observée."; }
+    else synthese = SYNTH[pire] + " La fiabilité n'est pas évaluable (aucune défaillance observée).";
+  } else synthese = SYNTH[pire];
+  return {niveau: pire, synthese, constats: C, recs: R};
+}
+
+/* ============================ Courbes (SVG) ============================ */
+const N_PTS = 400;
+const cssv = n => `var(--${n})`;
+function niceStep(range, target = 6) {
+  const raw = range / target, p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
+  return (f < 1.5 ? 1 : f < 3.5 ? 2 : f < 7.5 ? 5 : 10) * p;
+}
+function ticks(lo, hi) {
+  const st = niceStep(hi - lo), out = [];
+  for (let x = Math.ceil(lo / st - 1e-9) * st; x <= hi + 1e-9; x += st) out.push(+x.toPrecision(10));
+  return out;
+}
+function lineChart({fn, xmax, ymin, ymax, ylabel, color, vlines = [], hlines = [], shade = null, mission}) {
+  const W = 720, H = 360, L = 58, Rr = 18, T = 14, B = 46, pw = W - L - Rr, ph = H - T - B;
+  const X = x => L + x / xmax * pw, Y = y => T + (1 - (y - ymin) / (ymax - ymin)) * ph;
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(ylabel)}">`;
+  for (const y of ticks(ymin, ymax)) s += `<line class="gl" x1="${L}" x2="${W - Rr}" y1="${Y(y)}" y2="${Y(y)}"/><text x="${L - 8}" y="${Y(y) + 4}" text-anchor="end">${+y.toFixed(2)}</text>`;
+  for (const x of ticks(0, xmax)) s += `<line class="gl" x1="${X(x)}" x2="${X(x)}" y1="${T}" y2="${T + ph}"/><text x="${X(x)}" y="${T + ph + 16}" text-anchor="middle">${g(x)}</text>`;
+  if (shade && shade < xmax) s += `<rect x="${X(shade)}" y="${T}" width="${X(xmax) - X(shade)}" height="${ph}" fill="${cssv("c-gris")}" opacity=".18"/>`;
+  s += `<line class="ax" x1="${L}" x2="${L}" y1="${T}" y2="${T + ph}"/><line class="ax" x1="${L}" x2="${W - Rr}" y1="${T + ph}" y2="${T + ph}"/>`;
+  for (const h of hlines) s += `<line x1="${L}" x2="${W - Rr}" y1="${Y(h.y)}" y2="${Y(h.y)}" stroke="${cssv(h.c)}" stroke-width="1.6" stroke-dasharray="${h.d}"/>`;
+  for (const v of vlines) s += `<line x1="${X(v.x)}" x2="${X(v.x)}" y1="${T}" y2="${T + ph}" stroke="${cssv(v.c)}" stroke-width="1.6" stroke-dasharray="${v.d}"/>`;
+  let d = "";
+  for (let i = 0; i < N_PTS; i++) { const x = xmax * i / (N_PTS - 1); d += (i ? "L" : "M") + X(x).toFixed(1) + " " + Y(fn(x)).toFixed(1); }
+  s += `<path d="${d}" fill="none" stroke="${cssv(color)}" stroke-width="2.5"/>`;
+  if (mission && mission.x <= xmax) s += `<line x1="${X(mission.x)}" x2="${X(mission.x)}" y1="${T}" y2="${T + ph}" stroke="${cssv("c-gris")}" stroke-dasharray="4 4"/><circle cx="${X(mission.x)}" cy="${Y(mission.y)}" r="5.5" fill="${cssv("c-rouge")}" stroke="${cssv("surface")}" stroke-width="1.5"/>`;
+  s += `<text x="${L + pw / 2}" y="${H - 6}" text-anchor="middle">Temps t (h)</text>`;
+  s += `<text transform="translate(13 ${T + ph / 2}) rotate(-90)" text-anchor="middle">${esc(ylabel)}</text></svg>`;
+  return s;
+}
+const lg = items => `<div class="legend">${items.map(i => `<span><i class="${i.k || ""}" style="${i.k === "pt" || i.k === "sh" ? "" : "border-color:" + cssv(i.c)}"></i>${esc(i.t)}</span>`).join("")}</div>`;
+const missionLeg = (t, y, tmax) => ({k: "pt", t: t <= tmax ? `Mission t = ${g(t)} h : ${y.toFixed(2)} %` : `Mission t = ${g(t)} h : ${y.toFixed(2)} % (hors de l'axe)`});
+
+function figures(res, zoom) {
+  const {d, ind} = res, t = d.t, lam = ind.LAMBDA.valeur, mu = ind.MU.valeur, mtbf = ind.MTBF.valeur, mttr = ind.MTTR.valeur;
+  const raison = d.n === 0 ? "aucune défaillance observée : λ, μ et les estimations exponentielles ne sont pas calculables." : "temps de réparation nul : μ non calculable (division par zéro).";
+  const na = () => `<div class="msg info">Courbe non disponible : ${raison}</div>`;
+  const out = {};
+
+  if (ind.R.valeur === null) out.R = na(); else {
+    const tmax = 2 * t * zoom, rm = ind.R.valeur * 100, vl = [], leg = [{c: "c-bleu", t: "R(t) = exp(−λ·t)"}];
+    if (mtbf <= tmax) { vl.push({x: mtbf, c: "c-orange", d: "2 4"}); leg.push({c: "c-orange", k: "dot", t: `MTBF = ${g(mtbf)} h (R ≈ 36,8 %)`}); }
+    if (d.top < tmax) leg.push({k: "sh", t: "Au-delà du temps observé (extrapolation)"});
+    leg.push(missionLeg(t, rm, tmax));
+    out.R = lineChart({fn: x => Math.exp(-lam * x) * 100, xmax: tmax, ymin: 0, ymax: 102, ylabel: "Fiabilité R(t) (%)", color: "c-bleu", vlines: vl, shade: d.top, mission: {x: t, y: rm}}) + lg(leg);
+  }
+  if (!lam || mu === null) out.A = na(); else {
+    const aObs = ind.DISPO_OBS.valeur, aInf = mu / (lam + mu), tmax = Math.max(t, 5 / (lam + mu)) * zoom;
+    const A = x => (mu / (lam + mu) + lam / (lam + mu) * Math.exp(-(lam + mu) * x)) * 100, am = A(t);
+    out.A = lineChart({fn: A, xmax: tmax, ymin: Math.max(0, Math.min(aInf, aObs) * 100 - 2), ymax: 100.5, ylabel: "Disponibilité A(t) (%)", color: "c-vert",
+      hlines: [{y: aInf * 100, c: "c-orange", d: "6 4"}, {y: aObs * 100, c: "c-bleu", d: "2 4"}], mission: {x: t, y: am}})
+      + lg([{c: "c-vert", t: "A(t) = μ/(λ+μ) + λ/(λ+μ)·exp(−(λ+μ)·t)"}, {c: "c-orange", k: "dash", t: `Asymptote = A intrinsèque = ${(aInf * 100).toFixed(3)} %`},
+        {c: "c-bleu", k: "dot", t: `Disponibilité observée = ${(aObs * 100).toFixed(3)} %`}, missionLeg(t, am, tmax)]);
+  }
+  if (ind.M.valeur === null) out.M = na(); else {
+    const tmax = Math.max(t, 5 * mttr) * zoom, mm = ind.M.valeur * 100, vl = [], leg = [{c: "c-orange", t: "M(t) = 1 − exp(−μ·t)"}];
+    if (mttr <= tmax) { vl.push({x: mttr, c: "c-bleu", d: "2 4"}); leg.push({c: "c-bleu", k: "dot", t: `MTTR = ${g(mttr)} h (M ≈ 63,2 %)`}); }
+    leg.push(missionLeg(t, mm, tmax));
+    out.M = lineChart({fn: x => (1 - Math.exp(-mu * x)) * 100, xmax: tmax, ymin: 0, ymax: 102, ylabel: "Maintenabilité M(t) (%)", color: "c-orange", vlines: vl, mission: {x: t, y: mm}}) + lg(leg);
+  }
+  // Comparatif
+  const items = [["Disponibilité observée", "DISPO_OBS", "c-vert"], ["Disponibilité intrinsèque", "DISPO_INTR", "c-vert"],
+    [`Fiabilité R(${g(t)} h)`, "R", "c-bleu"], [`Maintenabilité M(${g(t)} h)`, "M", "c-orange"]];
+  const bar = (label, w, color, hatch, txt) => `<div class="bar"><span>${esc(label)}</span><div class="track"><div class="fill ${hatch ? "hatch" : ""}" style="width:${w}%;background-color:${cssv(color)}"></div></div><span class="val">${txt}</span></div>`;
+  let c = `<div class="bars">` + items.map(([l, k, col]) => { const i = ind[k]; return bar(l, i.valeur === null ? 0 : i.valeur * 100, col, i.nature === "E", i.valeur === null ? "Non calculable" : pct(i.valeur) + " %"); }).join("") + `</div>`;
+  const hv = [mtbf, mttr], pos = hv.filter(x => x > 0), logS = pos.length === 2 && Math.max(...pos) / Math.min(...pos) > 50;
+  const sc = x => x === null || x <= 0 ? 0 : logS ? Math.max(3, Math.log10(x / (Math.min(...pos) / 2)) / Math.log10(Math.max(...pos) * 4 / (Math.min(...pos) / 2)) * 100) : x / Math.max(...hv.filter(y => y !== null), 1e-9) * 100;
+  c += `<h3 style="margin-top:8px">MTBF et MTTR${logS ? " (échelle logarithmique)" : ""}</h3><div class="bars">`
+    + bar("MTBF", sc(mtbf), "c-bleu", false, mtbf === null ? "Non calculable" : g(mtbf) + " h")
+    + bar("MTTR", sc(mttr), "c-orange", false, mttr === null ? "Non calculable" : g(mttr) + " h") + `</div>`;
+  out.C = c;
+  return out;
+}
+
+/* ============================ Affichage ============================ */
+const LEG_VARS = "<b>N</b> : nombre de défaillances · <b>T_fonct</b> : temps total de fonctionnement (h) · <b>T_arrêt</b> : temps total d'arrêt (h) · <b>T_rép</b> : temps total de réparation (h) · <b>t</b> : durée de mission (h)";
+const PRIO = {1: "Priorité haute", 2: "Priorité moyenne", 3: "Priorité faible"};
+const badge = i => i.nature === "C" ? `<span class="tag calc">Calculé</span>` : `<span class="tag est">Estimé (modèle exponentiel)</span>`;
+const fmt = i => i.valeur === null ? "Non calculable" : ADIM.has(i.code) ? `${i.valeur.toFixed(6)} (${pct(i.valeur, 3)} %)` : `${g(i.valeur)} ${i.unite}`.trim();
+let CUR = null, TAB = "R";
+
+function render() {
+  const out = $("out");
+  if (!CUR) return;
+  if (CUR.erreurs) {
+    out.innerHTML = `<div class="msg err"><b>Calcul impossible : corrigez les points suivants.</b><ul>${CUR.erreurs.map(e => `<li>${esc(e)}</li>`).join("")}</ul></div>`;
+    return;
+  }
+  const res = CUR, ind = res.ind, it = interpreter(res);
+  const cle = ["MTBF", "MTTR", "LAMBDA", "MU"].map(k => { const i = ind[k], na = i.valeur === null;
+    return `<div class="metric"><div class="k">${k === "LAMBDA" ? "λ" : k === "MU" ? "μ" : k}</div><div class="v ${na ? "na" : ""}">${na ? "Non calculable" : g(i.valeur)} <span class="u">${na ? "" : i.unite}</span></div></div>`; }).join("");
+  const cle2 = ["DISPO_OBS", "DISPO_INTR", "R", "M"].map(k => { const i = ind[k], na = i.valeur === null;
+    return `<div class="metric"><div class="k">${esc(i.libelle)}</div><div class="v ${na ? "na" : ""}">${na ? "Non calculable" : pct(i.valeur, 3) + " %"}</div></div>`; }).join("");
+  const rows = Object.values(ind).map(i => `<tr><td>${esc(i.libelle)}</td><td class="num">${esc(fmt(i))}</td><td>${i.unite || "sans unité"}</td><td>${badge(i)}</td></tr>`).join("");
+  const msgCls = {Critique: "err", Attention: "warn", Bon: "ok", Information: "info"}[it.niveau];
+  const formulas = Object.values(ind).map(i => `<details><summary>${esc(i.libelle)} &nbsp; ${badge(i)}</summary><div class="in">
+      <div class="formule">${esc(i.formule)}</div><div class="cap">Application numérique</div><pre class="code">${esc(i.num)}</pre>
+      <div><b>Résultat :</b> ${esc(fmt(i))}</div>${i.remarque ? `<div class="msg info">${esc(i.remarque)}</div>` : ""}</div></details>`).join("");
+  const seuils = [["Disponibilité observée", S.dispoHaute, S.dispoBasse], ["Fiabilité R(t)", S.fiabHaute, S.fiabBasse], ["Maintenabilité M(t)", S.maintHaute, S.maintBasse]]
+    .map(([n, h, b]) => [n, `Bon ≥ ${h * 100} % · Attention de ${b * 100} % à ${h * 100} % · Critique < ${b * 100} %`])
+    .concat([["Rapport MTTR / MTBF", `Attention si > ${S.ratio * 100} %`], ["Part de l'arrêt hors réparation", `Attention si > ${S.attente * 100} %`], ["Nombre de défaillances", `Échantillon faible si N < ${SEUIL_FAIBLE}`]])
+    .map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join("");
+
+  out.innerHTML = `<div style="display:flex;flex-direction:column;gap:28px">
+  <section><div><div class="kicker">Résultats</div><h2>${esc(res.d.nom.trim())}</h2></div>
+    ${res.avert.map(w => `<div class="msg warn">${esc(w)}</div>`).join("")}
+    <div class="metrics">${cle}</div><div class="metrics">${cle2}</div></section>
+  <section><h2>Tableau récapitulatif</h2>
+    <div class="panel scroll" style="padding:6px 8px"><table><thead><tr><th>Indicateur</th><th>Valeur</th><th>Unité</th><th>Nature</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <p class="cap"><span class="tag calc">Calculé</span> déduit directement des valeurs saisies. <span class="tag est">Estimé</span> repose sur l'hypothèse d'un taux constant (loi exponentielle).</p></section>
+  <section><h2>Courbes et graphique comparatif</h2>
+    <label class="zoom" for="zoom">Zoom sur l'axe du temps (× horizon par défaut) <input id="zoom" type="range" min="0.25" max="5" step="0.25" value="${ZOOM}"><b id="zv">${ZOOM}×</b></label>
+    <div class="tabs" role="tablist">${[["R", "Fiabilité R(t)"], ["A", "Disponibilité A(t)"], ["M", "Maintenabilité M(t)"], ["C", "Comparatif"]].map(([k, l]) => `<button role="tab" data-tab="${k}" aria-selected="${k === TAB}">${l}</button>`).join("")}</div>
+    <div class="panel" id="fig"></div><p class="cap" id="figcap"></p></section>
+  <section><h2>Interprétation technique automatique</h2>
+    <div class="msg ${msgCls}"><b>${it.niveau}</b> : ${esc(it.synthese)}</div>
+    ${it.constats.map(c => `<div class="item"><div class="head"><span class="tag ${c.niveau}">${c.niveau}</span><b>${esc(c.titre)}</b><span class="cap">${esc(c.nature)}</span></div><p>${esc(c.texte)}</p></div>`).join("")}</section>
+  <section><h2>Recommandations de maintenance</h2>
+    ${it.recs.map(r => `<div class="item"><div class="head"><span class="tag p${r.p}">${PRIO[r.p]}</span></div><p>${esc(r.action)}</p><p class="cap">Pourquoi : ${esc(r.j)}</p></div>`).join("")}
+    <p class="cap">${AVERT_INTERP}</p>
+    <details><summary>Seuils indicatifs utilisés pour l'interprétation</summary><div class="in"><div class="scroll"><table><thead><tr><th>Critère</th><th>Règle appliquée</th></tr></thead><tbody>${seuils}</tbody></table></div>
+      <p class="cap">Conventions de pratique, sans valeur normative : à adapter au contexte de l'entreprise et à la criticité de l'équipement.</p></div></details></section>
+  <section><h2>Formules et remplacement des variables</h2><p class="legendvars">${LEG_VARS}</p>${formulas}</section>
+  <section><h2>Paramètres de Weibull</h2><div class="msg info">${esc(NOTE_WEIBULL)}</div></section></div>`;
+  drawFigures();
+  $("zoom").addEventListener("input", e => { ZOOM = parseFloat(e.target.value); $("zv").textContent = ZOOM + "×"; drawFigures(); });
+  out.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => {
+    TAB = b.dataset.tab; out.querySelectorAll("[data-tab]").forEach(x => x.setAttribute("aria-selected", x === b)); drawFigures(); }));
+}
+let ZOOM = 1;
+const CAPS = {
+  R: "Estimation : suppose un taux de défaillance constant. La zone grisée dépasse le temps de fonctionnement observé (extrapolation).",
+  A: "Estimation : modèle à deux états (marche / réparation), avec l'équipement en marche à t = 0.",
+  M: "Estimation : suppose une durée de réparation de loi exponentielle. La même durée t que la mission est utilisée.",
+  C: "Barres pleines : indicateurs calculés. Barres hachurées : estimations."};
+function drawFigures() {
+  if (!CUR || CUR.erreurs) return;
+  $("fig").innerHTML = figures(CUR, ZOOM)[TAB];
+  $("figcap").textContent = CAPS[TAB];
+}
+
+/* ============================ Saisie ============================ */
+const num = id => { const s = $(id).value.trim(); return s === "" ? NaN : Number(s); };
+$("form").addEventListener("submit", e => {
+  e.preventDefault();
+  CUR = calculer({nom: $("nom").value, n: num("nb"), top: num("tf"), tarr: num("ta"), trep: num("tr"), t: num("tm")});
+  render();
+});
+$("form").requestSubmit();
+</script>
+
+</body></html>
